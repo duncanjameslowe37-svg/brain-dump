@@ -1,0 +1,53 @@
+import {test,expect} from '@playwright/test';
+let errors;
+test.beforeEach(async({page})=>{errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>m.type()==='error'&&errors.push(m.text()));});
+test.afterEach(()=>expect(errors,'console errors').toEqual([]));
+async function fresh(page,seed=false){await page.goto('./');await page.evaluate(s=>{localStorage.clear();if(!s)localStorage.setItem('braindump.v1','[]')},seed);await page.reload();}
+async function dump(page,t){await page.fill('#input',t);await page.keyboard.press('Enter');}
+const items=p=>p.locator('#list .item');
+
+test('first run seeds examples once; emptying does not re-seed',async({page})=>{await fresh(page,true);await page.click('[data-t=all]');await expect(items(page)).toHaveCount(5);
+ for(let k=0;k<5;k++){await items(page).first().locator('.ttl').click();await page.click('#eDel');}
+ await page.reload();await page.click('[data-t=all]');await expect(items(page)).toHaveCount(0);await expect(page.locator('.empty h2')).toBeVisible();});
+test('live preview + add classifies, switches to category tab',async({page})=>{await fresh(page);await page.fill('#input','milk, eggs and bread');
+ await expect(page.locator('#preview')).toContainText('Shopping');await expect(page.locator('#preview')).toContainText('3 items');await page.click('#send');
+ await expect(page.locator('[data-t=shopping]')).toHaveAttribute('aria-selected','true');await expect(page.locator('.subs li')).toHaveCount(3);await expect(page.locator('#input')).toHaveValue('');await expect(page.locator('#send')).toBeDisabled();});
+test('Enter adds exactly one entry (no double fire)',async({page})=>{await fresh(page);await dump(page,'Call the plumber');await page.click('[data-t=all]');await expect(items(page)).toHaveCount(1);expect(await page.evaluate(()=>JSON.parse(localStorage['braindump.v1']).length)).toBe(1);});
+test('reminder shows in Today, overdue first',async({page})=>{await fresh(page);await dump(page,'dentist in 2 hours');
+ await page.evaluate(()=>{const a=JSON.parse(localStorage['braindump.v1']);a.push({id:'old',text:'Old thing',title:'Old thing',cat:'task',due:new Date(Date.now()-36e5).toISOString(),hasTime:true,created:1,done:false,notified:true});localStorage['braindump.v1']=JSON.stringify(a)});await page.reload();
+ await expect(page.locator('.sec').first()).toContainText('Overdue');await expect(items(page).first()).toContainText('Old thing');await expect(items(page).nth(1)).toContainText('Dentist');});
+test('complete, undo via toast; stale undo does not resurrect',async({page})=>{await fresh(page);await dump(page,'Renew passport');await page.click('[data-t=all]');
+ await items(page).first().locator('.chk').click();await expect(items(page).first()).toHaveClass(/done/);await page.locator('#toast button').click();await expect(items(page).first()).not.toHaveClass(/done/);
+ await items(page).first().locator('.ttl').click();await page.click('#eDel');await expect(items(page)).toHaveCount(0);await page.locator('#toast button').click();await expect(items(page)).toHaveCount(1);
+ await dump(page,'Book MOT');await expect(page.locator('#toast button')).toBeHidden();await expect(items(page)).toHaveCount(2);});
+test('shopping sub-items tick and auto-complete',async({page})=>{await fresh(page);await dump(page,'apples, pears');const subs=page.locator('.subs button');
+ await subs.nth(0).click();await expect(subs.nth(0)).toHaveClass(/x/);await subs.nth(1).click();await expect(items(page).first()).toHaveClass(/done/);});
+test('edit text, category and date',async({page})=>{await fresh(page);await dump(page,'Call the plumber');await page.click('[data-t=all]');await items(page).first().locator('.ttl').click();
+ await page.fill('#eText','Call the electrician');await page.click('.chip[data-c=reminder]');await page.fill('#eDue','2030-05-01T10:30');await page.click('#eSave');
+ await expect(page.locator('#sheet')).toBeHidden();const it=items(page).first();await expect(it).toContainText('Call the electrician');await expect(it).toContainText('Reminders');await expect(it).toContainText('1 May 2030, 10:30');});
+test('recategorise via editor moves between tabs',async({page})=>{await fresh(page);await dump(page,'The park was lovely');await expect(page.locator('[data-t=note]')).toHaveAttribute('aria-selected','true');
+ await items(page).first().locator('.ttl').click();await page.click('.chip[data-c=idea]');await page.click('#eSave');await expect(items(page)).toHaveCount(0);await page.click('[data-t=idea]');await expect(items(page)).toHaveCount(1);});
+test('search filters and clears',async({page})=>{await fresh(page);await dump(page,'Call the plumber');await dump(page,'Idea: bike van');await page.click('#searchBtn');await page.fill('#search','van');
+ await expect(items(page)).toHaveCount(1);await page.fill('#search','zzz');await expect(page.locator('.empty h2')).toHaveText('No matches');await page.click('#searchBtn');await expect(page.locator('#searchBar')).toBeHidden();});
+test('menu opens/closes via scrim and Escape; theme persists',async({page})=>{await fresh(page);await page.click('#menuBtn');await expect(page.locator('#sheet')).toBeVisible();
+ await page.mouse.click(10,10);await expect(page.locator('#sheet')).toBeHidden();await page.click('#menuBtn');await page.keyboard.press('Escape');await expect(page.locator('#sheet')).toBeHidden();
+ const t=await page.locator('html').getAttribute('data-theme');await page.click('#themeBtn');await page.reload();expect(await page.locator('html').getAttribute('data-theme')).not.toBe(t);});
+test('export then import round-trip dedupes',async({page})=>{await fresh(page);await dump(page,'Call the plumber');await page.click('#menuBtn');
+ const [dl]=await Promise.all([page.waitForEvent('download'),page.click('[data-m=export]')]);const path=await dl.path();
+ await page.click('#menuBtn');await page.locator('#file').setInputFiles(path);await expect(page.locator('#toast')).toContainText('No new entries');
+ await page.evaluate(()=>localStorage['braindump.v1']='[]');await page.reload();await page.click('#menuBtn');await page.locator('#file').setInputFiles(path);await expect(page.locator('#toast')).toContainText('Imported 1');
+ await page.click('#menuBtn');await page.locator('#file').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from('nope')});await expect(page.locator('#toast')).toContainText('isn’t');});
+test('swipe right completes; vertical drag does not',async({page,isMobile})=>{test.skip(!isMobile);await fresh(page);await dump(page,'Renew passport');await page.click('[data-t=all]');
+ const box=await items(page).first().boundingBox();const cdp=await page.context().newCDPSession(page);
+ const touch=async(pts)=>{await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[pts[0]]});for(const p of pts.slice(1))await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[p]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});};
+ const y=box.y+box.height/2;await touch([{x:120,y},{x:122,y:y+20},{x:124,y:y+60},{x:126,y:y+100}]);await page.waitForTimeout(400);await expect(items(page).first()).not.toHaveClass(/done/);
+ await touch([{x:80,y},{x:100,y},{x:160,y},{x:240,y},{x:300,y}]);await expect(items(page).first()).toHaveClass(/done/);});
+test('layout: no overflow, tap targets >=44px, sheet fits',async({page})=>{await fresh(page,true);await page.waitForTimeout(400);
+ const r=await page.evaluate(()=>({ov:document.documentElement.scrollWidth>innerWidth,small:[...document.querySelectorAll('button:not(.subs button),textarea,input:not([type=file])')].filter(e=>e.offsetParent&&!e.closest('#toast')).map(e=>[e.id||e.className,e.getBoundingClientRect()]).filter(([,b])=>b.width<44||b.height<36).map(([n,b])=>n+':'+Math.round(b.width)+'x'+Math.round(b.height))}));
+ expect(r.ov).toBe(false);expect(r.small).toEqual([]);
+ await items(page).first().locator('.ttl').click();await page.waitForTimeout(400);const pb=await page.locator('.panel').boundingBox();const vh=page.viewportSize().height;expect(pb.y+pb.height).toBeLessThanOrEqual(vh+1);expect(pb.y).toBeGreaterThanOrEqual(0);});
+test('no layout shift on load/add',async({page})=>{await page.addInitScript(()=>{window.__cls=0;new PerformanceObserver(l=>l.getEntries().forEach(e=>{if(!e.hadRecentInput)window.__cls+=e.value})).observe({type:'layout-shift',buffered:true})});
+ await fresh(page,true);await dump(page,'Call the plumber');await page.waitForTimeout(500);expect(await page.evaluate(()=>window.__cls)).toBeLessThan(0.02);});
+test('service worker controls page and works offline',async({page,context})=>{await fresh(page);await page.evaluate(()=>navigator.serviceWorker.ready);await page.reload();
+ expect(await page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);const v=await page.evaluate(async()=>(await caches.keys()).join());expect(v).toContain('bd-v2');
+ await context.setOffline(true);await page.reload();await expect(page.locator('h1')).toHaveText('Brain Dump');await dump(page,'offline note works');await page.click('[data-t=all]');await expect(items(page)).toHaveCount(1);await context.setOffline(false);});

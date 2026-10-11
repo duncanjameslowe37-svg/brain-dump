@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 let errors;
 test.beforeEach(async({page})=>{errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>m.type()==='error'&&errors.push(m.text()));});
 test.afterEach(()=>expect(errors,'console errors').toEqual([]));
-async function fresh(page,seed=false){await page.goto('./');await page.evaluate(s=>{localStorage.clear();if(!s)localStorage.setItem('braindump.v1','[]')},seed);await page.reload();}
+async function fresh(page,seed=false){await page.goto('./');await page.evaluate(s=>{localStorage.clear();localStorage.setItem('bd.onboarded','1');if(!s)localStorage.setItem('braindump.v1','[]')},seed);await page.reload();}
 async function dump(page,t){await page.fill('#input',t);await page.keyboard.press('Enter');}
 const items=p=>p.locator('#list .item');
 
@@ -24,7 +24,7 @@ test('shopping sub-items tick and auto-complete',async({page})=>{await fresh(pag
  await subs.nth(0).click();await expect(subs.nth(0)).toHaveClass(/x/);await subs.nth(1).click();await expect(items(page).first()).toHaveClass(/done/);});
 test('edit text, category and date',async({page})=>{await fresh(page);await dump(page,'Call the plumber');await page.click('[data-t=all]');await items(page).first().locator('.ttl').click();
  await page.fill('#eText','Call the electrician');await page.click('.chip[data-c=reminder]');await page.fill('#eDue','2030-05-01T10:30');await page.click('#eSave');
- await expect(page.locator('#sheet')).toBeHidden();const it=items(page).first();await expect(it).toContainText('Call the electrician');await expect(it).toContainText('Reminders');await expect(it).toContainText('1 May 2030, 10:30');});
+ await expect(page.locator('#sheet')).toBeHidden();const it=items(page).first();await expect(it).toContainText('Call the electrician');await expect(it).toContainText('Reminders');await expect(it).toContainText('1 May 2030 10:30');});
 test('recategorise via editor moves between tabs',async({page})=>{await fresh(page);await dump(page,'The park was lovely');await expect(page.locator('[data-t=note]')).toHaveAttribute('aria-selected','true');
  await items(page).first().locator('.ttl').click();await page.click('.chip[data-c=idea]');await page.click('#eSave');await expect(items(page)).toHaveCount(0);await page.click('[data-t=idea]');await expect(items(page)).toHaveCount(1);});
 test('search filters and clears',async({page})=>{await fresh(page);await dump(page,'Call the plumber');await dump(page,'Idea: bike van');await page.click('#searchBtn');await page.fill('#search','van');
@@ -49,5 +49,5 @@ test('layout: no overflow, tap targets >=44px, sheet fits',async({page})=>{await
 test('no layout shift on load/add',async({page})=>{await page.addInitScript(()=>{window.__cls=0;new PerformanceObserver(l=>l.getEntries().forEach(e=>{if(!e.hadRecentInput)window.__cls+=e.value})).observe({type:'layout-shift',buffered:true})});
  await fresh(page,true);await dump(page,'Call the plumber');await page.waitForTimeout(500);expect(await page.evaluate(()=>window.__cls)).toBeLessThan(0.02);});
 test('service worker controls page and works offline',async({page,context})=>{await fresh(page);await page.evaluate(()=>navigator.serviceWorker.ready);await page.reload();
- expect(await page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);const v=await page.evaluate(async()=>(await caches.keys()).join());expect(v).toContain('bd-v2');
- await context.setOffline(true);await page.reload();await expect(page.locator('h1')).toHaveText('Brain Dump');await dump(page,'offline note works');await page.click('[data-t=all]');await expect(items(page)).toHaveCount(1);await context.setOffline(false);});
+ expect(await page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);const v=await page.evaluate(async()=>(await caches.keys()).join());expect(v).toContain('bd-v3');
+ await context.setOffline(true);await page.reload();await expect(page.locator('h1')).toHaveText('Today');await dump(page,'offline note works');await page.click('[data-t=all]');await expect(items(page)).toHaveCount(1);await context.setOffline(false);});

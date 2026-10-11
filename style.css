@@ -132,4 +132,4 @@ main{padding:0 var(--s4)}
 .dots{display:flex;justify-content:center;gap:6px;margin-top:var(--s4)}.dots i{width:7px;height:7px;border-radius:4px;background:var(--soft);transition:width .25s var(--ease),background .25s}.dots i.on{width:20px;background:var(--acc)}
 
 .c-note .player{--c:var(--acc)}
-.panel .btns{position:sticky;bottom:calc(-1 * (var(--s5) + var(--sab)));margin:var(--s5) calc(-1 * var(--s5)) calc(-1 * (var(--s5) + var(--sab)));padding:var(--s3) var(--s5) calc(var(--s5) + var(--sab));background:linear-gradient(to bottom,color-mix(in srgb,var(--card) 0%,transparent),var(--card) 14px);z-index:1}
+.panel .btns.stick{position:sticky;bottom:calc(-1 * (var(--s5) + var(--sab)));margin:var(--s5) calc(-1 * var(--s5)) calc(-1 * (var(--s5) + var(--sab)));padding:var(--s3) var(--s5) calc(var(--s5) + var(--sab));background:linear-gradient(to bottom,color-mix(in srgb,var(--card) 0%,transparent),var(--card) 14px);z-index:1}

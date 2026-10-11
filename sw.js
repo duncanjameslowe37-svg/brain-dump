@@ -1,4 +1,4 @@
-const VERSION='bd-v3-2026-10-11d';
+const VERSION='bd-v3-2026-10-11e';
 const ASSETS=['./','index.html','style.css?v=3c','icons.js?v=3c','classifier.js?v=3c','insights.js?v=3c','cal.js?v=3c','store.js?v=3c','sync.js?v=3c','snap.js?v=3c','app.js?v=3c','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(VERSION).then(c=>c.addAll(ASSETS.map(u=>new Request(u,{cache:'reload'})))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==VERSION).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});

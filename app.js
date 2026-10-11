@@ -161,7 +161,7 @@ ${i.photo?`<img class="photo" id="ePhoto" alt="Attached photo">`:''}
 ${i.due?`<div class="calrow"><span>${I('cal')}Add to calendar</span><button type="button" class="pill" id="eIcs">.ics</button><a class="pill" target="_blank" rel="noopener" href="${Cal.google(i)}">Google</a><a class="pill" target="_blank" rel="noopener" href="${Cal.outlook(i)}">Outlook</a></div>`:''}
 ${rel.length?`<label>Related</label><div class="related">${rel.map(r=>`<button type="button" class="relitem" data-rel="${r.id}">${I(r.cat,'c-'+r.cat)}<span>${esc(r.title)}</span></button>`).join('')}</div>`:''}
 ${i.ocr?`<details class="ocr"><summary>Scanned text</summary><pre>${esc(i.ocr)}</pre></details>`:''}
-<div class="btns"><button type="button" class="btn dng" id="eDel" aria-label="Delete">${I('trash')}</button><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn pri" id="eSave">Save</button></div>`,p=>{
+<div class="btns stick"><button type="button" class="btn dng" id="eDel" aria-label="Delete">${I('trash')}</button><button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn pri" id="eSave">Save</button></div>`,p=>{
   if(i.photo)blobUrl(i.photo).then(u=>{const im=p.querySelector('#ePhoto');if(im&&u)im.src=u});
   p.querySelector('#ePlay')?.addEventListener('click',e=>play(e.currentTarget));
   p.querySelector('.chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;cat=c.dataset.c;p.querySelectorAll('.chip[data-c]').forEach(x=>x.setAttribute('aria-pressed',x===c));const l=p.querySelector('#eCatLbl');l.className='cat c-'+cat;l.innerHTML=I(cat)+CATS[cat]};
@@ -291,7 +291,7 @@ function showSnapForm(blob,thumb,text,x){let kind=x.kind;
 <div class="two"><div><label for="sAmt">Amount (£)</label><input class="field" id="sAmt" inputmode="decimal" value="${x.amount!=null?x.amount.toFixed(2):''}"></div><div><label for="sDue">Due date</label><input class="field" type="date" id="sDue" value="${x.due?toLocal(x.due).slice(0,10):''}"></div></div>
 <label>Save as</label><div class="chips">${['reminder','money','note'].map(k=>`<button type="button" class="chip c-${k}" data-k="${k}" aria-pressed="${k===kind}">${I(k)}${CATS[k].replace(/s$/,'')}</button>`).join('')}</div>
 ${text.trim()?`<details class="ocr"><summary>Scanned text</summary><pre>${esc(text.trim())}</pre></details>`:'<p class="fine">No text found — you can still save the photo.</p>'}
-<div class="btns"><button class="btn" data-close>Cancel</button><button class="btn pri" id="sSave">Save</button></div>`,p=>{
+<div class="btns stick"><button class="btn" data-close>Cancel</button><button class="btn pri" id="sSave">Save</button></div>`,p=>{
   p.querySelector('.chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;kind=c.dataset.k;p.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b===c))};
   p.querySelector('#sSave').onclick=async()=>{const key='p-'+uid();try{await Media.put(key,blob)}catch{return toast('Couldn’t save photo')}
    const title=p.querySelector('#sTitle').value.trim()||'Scanned document',amt=parseFloat(p.querySelector('#sAmt').value.replace(/[£,]/g,'')),dd=p.querySelector('#sDue').value;

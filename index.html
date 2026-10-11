@@ -1,0 +1,21 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Brain Dump</title><meta name="theme-color" content="#6d5dfc">
+<meta name="description" content="Dump any thought. It sorts itself.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><link rel="stylesheet" href="style.css"></head>
+<body><div id="app">
+<header><div class="brand"><div class="logo">🧠</div><div><h1>Brain Dump</h1><p id="greet"></p></div></div>
+<div class="hbtns"><button id="searchBtn" aria-label="Search">⌕</button><button id="themeBtn" aria-label="Theme">◐</button><button id="menuBtn" aria-label="Menu">⋯</button></div></header>
+<div id="searchBar" class="hidden"><input id="search" placeholder="Search everything…" autocomplete="off"></div>
+<nav id="tabs"></nav>
+<main id="list"></main>
+<form id="dump"><div id="preview"></div><div class="inrow">
+<textarea id="input" rows="1" placeholder="What's on your mind?" autocomplete="off"></textarea>
+<button type="button" id="mic" aria-label="Speak">🎤</button><button id="send" aria-label="Add">↑</button></div></form>
+<div id="sheet" class="hidden"><div class="sheet-in"><h3>Menu</h3>
+<button data-a="notify">🔔 Enable reminder notifications</button><button data-a="export">⬇️ Export JSON</button>
+<button data-a="import">⬆️ Import JSON</button><button data-a="clearDone">🧹 Clear completed</button><button data-a="install" id="installBtn" class="hidden">📲 Install app</button>
+<button data-a="close" class="ghost">Close</button><input type="file" id="file" accept="application/json" hidden></div></div>
+<div id="toast"></div></div>
+<script src="classifier.js"></script><script src="app.js"></script></body></html>
